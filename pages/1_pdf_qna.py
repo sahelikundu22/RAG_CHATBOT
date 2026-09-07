@@ -79,15 +79,28 @@ if selected_pdf or uploaded_file:
                     raw_text = extract_text(uploaded_file)
                     chunks, embeddings = process_text(raw_text)
 
-            build_faiss_index(chunks, embeddings)
+            persist_dir = selected_pdf.cache_dir if selected_pdf else None
+            build_faiss_index(
+                chunks,
+                embeddings,
+                persist_dir=persist_dir,
+                collection_key=file_id,
+            )
             st.session_state.raw_text = raw_text
             st.session_state.chunks = chunks
             st.session_state.embeddings = embeddings
+            st.session_state.persist_dir = str(persist_dir) if persist_dir else None
             st.session_state.file_id = file_id
             st.session_state.total_chunks = len(chunks)
 
             st.success(f"PDF ready: {len(chunks)} chunks indexed.")
         else:
+            build_faiss_index(
+                st.session_state.get("chunks", []),
+                st.session_state.get("embeddings"),
+                persist_dir=st.session_state.get("persist_dir"),
+                collection_key=file_id,
+            )
             st.info(f"Ready: {st.session_state.get('total_chunks', 0)} chunks indexed.")
 
         chat_container = st.container(height=500)

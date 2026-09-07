@@ -21,6 +21,7 @@ INDEX_ROOT = PROJECT_ROOT / "storage" / "pdf_indexes"
 class IndexedPdf:
     name: str
     path: Path
+    cache_dir: Path
     pdf_bytes: bytes
     raw_text: str
     chunks: List[str]
@@ -40,6 +41,9 @@ def available_pdfs() -> Dict[str, Path]:
 def cache_dir_for(name: str) -> Path:
     safe_name = re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
     return INDEX_ROOT / safe_name
+
+
+PIPELINE_VERSION = "bge-small-en-v1.5-char5000"
 
 
 def is_index_cached(name: str) -> bool:
@@ -64,6 +68,7 @@ def is_index_cached(name: str) -> bool:
         metadata.get("source_path") == str(path)
         and metadata.get("source_size") == path.stat().st_size
         and metadata.get("source_modified_time") == path.stat().st_mtime
+        and metadata.get("pipeline_version") == PIPELINE_VERSION
     )
 
 
@@ -75,6 +80,7 @@ def _load_from_disk(name: str, path: Path, pdf_bytes: bytes) -> IndexedPdf:
     return IndexedPdf(
         name=name,
         path=path,
+        cache_dir=cache_dir,
         pdf_bytes=pdf_bytes,
         raw_text=metadata["raw_text"],
         chunks=metadata["chunks"],
@@ -88,6 +94,8 @@ def _save_to_disk(indexed_pdf: IndexedPdf) -> None:
 
     metadata = {
         "name": indexed_pdf.name,
+        "pipeline_version": PIPELINE_VERSION,
+        "embedding_model": "BAAI/bge-small-en-v1.5",
         "source_path": str(indexed_pdf.path),
         "source_size": indexed_pdf.path.stat().st_size,
         "source_modified_time": indexed_pdf.path.stat().st_mtime,
@@ -100,6 +108,7 @@ def _save_to_disk(indexed_pdf: IndexedPdf) -> None:
         encoding="utf-8",
     )
     np.save(cache_dir / "embeddings.npy", indexed_pdf.embeddings)
+
 
 
 def _cache_resource(**kwargs):
@@ -127,6 +136,7 @@ def load_indexed_pdf(
     indexed_pdf = IndexedPdf(
         name=name,
         path=path,
+        cache_dir=cache_dir_for(name),
         pdf_bytes=pdf_bytes,
         raw_text=raw_text,
         chunks=chunks,

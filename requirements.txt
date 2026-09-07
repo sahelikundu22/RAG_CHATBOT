@@ -7,3 +7,10 @@ torchvision
 faiss-cpu
 numpy
 requests
+pypdf
+langchain
+langchain-core
+langchain-community
+langchain-huggingface
+chromadb
+python-dotenv
